@@ -23,7 +23,8 @@
     "db:migrate": "npm run db:migrate --workspace=server",
     "db:deploy": "npm run db:deploy --workspace=server",
     "db:schema-sql": "npm run db:schema-sql --workspace=server",
-    "postinstall": "npm run db:generate --workspace=server"
+    "setup": "node scripts/setup.mjs",
+    "postinstall": "npm run build:shared && npm run db:generate --workspace=server"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
