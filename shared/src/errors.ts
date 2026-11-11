@@ -22,6 +22,8 @@ export const ERROR_CODES = {
   IMAGE_TOO_LARGE: 'IMAGE_TOO_LARGE',
   /** The `attachmentId` of a message does not exist, is someone else's, or is already sent. */
   ATTACHMENT_INVALID: 'ATTACHMENT_INVALID',
+  /** The Cloudflare Turnstile token of a login or register is missing, used or invalid. */
+  CAPTCHA_FAILED: 'CAPTCHA_FAILED',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

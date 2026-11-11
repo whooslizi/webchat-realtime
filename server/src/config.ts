@@ -61,6 +61,12 @@ export interface UploadsConfig {
   maxImagePixels: number;
 }
 
+/** Cloudflare Turnstile keys; the site key is public, the secret key stays on the server. */
+export interface TurnstileConfig {
+  siteKey: string;
+  secretKey: string;
+}
+
 export interface AppConfig {
   nodeEnv: NodeEnv;
   port: number;
@@ -70,6 +76,8 @@ export interface AppConfig {
   databaseUrl: string;
   logLevel: LogLevel;
   giphyApiKey: string | null;
+  /** Bot check on login and register, or null when it is off (no keys set). */
+  turnstile: TurnstileConfig | null;
   /** Built SPA directory to serve, or null when there is no build (dev/test only). */
   clientDistPath: string | null;
   storage: StorageConfig;
@@ -236,6 +244,18 @@ export function loadConfig(env: Env, options: LoadConfigOptions = {}): AppConfig
     fail('STORAGE_PROVIDER', 'must be one of local, supabase');
   }
 
+  // Turnstile: both keys or neither
+  let turnstile: TurnstileConfig | null = null;
+  const turnstileSiteKey = read(env, 'TURNSTILE_SITE_KEY');
+  const turnstileSecretKey = read(env, 'TURNSTILE_SECRET_KEY');
+  if (turnstileSiteKey && turnstileSecretKey) {
+    turnstile = { siteKey: turnstileSiteKey, secretKey: turnstileSecretKey };
+  } else if (turnstileSiteKey) {
+    fail('TURNSTILE_SECRET_KEY', 'is required when TURNSTILE_SITE_KEY is set');
+  } else if (turnstileSecretKey) {
+    fail('TURNSTILE_SITE_KEY', 'is required when TURNSTILE_SECRET_KEY is set');
+  }
+
   // Client build
   const clientDistPath = options.clientDistPath ?? DEFAULT_CLIENT_DIST_PATH;
   const clientBuildExists = hasClientBuild(clientDistPath);
@@ -254,6 +274,7 @@ export function loadConfig(env: Env, options: LoadConfigOptions = {}): AppConfig
     databaseUrl,
     logLevel,
     giphyApiKey: read(env, 'GIPHY_API_KEY') ?? null,
+    turnstile,
     clientDistPath: clientBuildExists ? clientDistPath : null,
     storage,
     rateLimits: structuredClone(DEFAULT_RATE_LIMITS),

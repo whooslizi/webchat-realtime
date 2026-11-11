@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { apiFetch } from '../../utils/apiFetch';
+import { TurnstileWidget } from './TurnstileWidget';
 import { Lock, Mail, User, AlertCircle, Info, Loader2, ArrowRight } from 'lucide-react';
-import { loginSchema, registerSchema, parseWithSchema, FieldError } from '@webchat/shared';
+import { loginSchema, registerSchema, parseWithSchema, FieldError, TurnstileConfigDto } from '@webchat/shared';
 
 type FieldErrors = Record<string, string>;
 
@@ -47,6 +49,27 @@ export const AuthScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  // Turnstile: on only when the server has keys. A token is single-use, so every attempt resets it.
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch('/api/auth/turnstile')
+      .then((res) => (res.ok ? res.json() : { siteKey: null }))
+      .then(({ siteKey }: TurnstileConfigDto) => {
+        if (!cancelled) setTurnstileSiteKey(siteKey);
+      })
+      .catch((err) => console.error('Turnstile config failed:', err));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** Null when the attempt may go ahead; otherwise the reason it may not. */
+  const turnstileBlocker = (): string | null =>
+    turnstileSiteKey && !turnstileToken ? 'Verifying you are human. Try again in a moment' : null;
 
   const clearFieldError = (field: string) =>
     setFieldErrors((current) => {
@@ -67,12 +90,18 @@ export const AuthScreen: React.FC = () => {
       return;
     }
     setFieldErrors({});
+    const blocker = turnstileBlocker();
+    if (blocker) {
+      setError(blocker);
+      return;
+    }
     setIsSubmitting(true);
 
     try {
-      await login(credentials);
+      await login({ ...credentials, turnstileToken: turnstileToken ?? undefined });
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
+      if (turnstileSiteKey) setTurnstileResetKey((key) => key + 1);
     } finally {
       setIsSubmitting(false);
     }
@@ -90,12 +119,18 @@ export const AuthScreen: React.FC = () => {
       return;
     }
     setFieldErrors({});
+    const blocker = turnstileBlocker();
+    if (blocker) {
+      setError(blocker);
+      return;
+    }
     setIsSubmitting(true);
 
     try {
-      await register(account);
+      await register({ ...account, turnstileToken: turnstileToken ?? undefined });
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
+      if (turnstileSiteKey) setTurnstileResetKey((key) => key + 1);
     } finally {
       setIsSubmitting(false);
     }
@@ -104,7 +139,7 @@ export const AuthScreen: React.FC = () => {
   return (
     <div
       id="screen-auth"
-      className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50/60 via-white to-amber-50/40 overflow-y-auto"
+      className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50/60 via-white to-amber-50/40 overflow-y-auto"
     >
       {/* Top-Anchored Card with Strict Fixed Height = 100% ZERO SHIFT */}
       <div
@@ -418,6 +453,10 @@ export const AuthScreen: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* Outside the fixed-height card, so the widget appearing never shifts the form. */}
+      {turnstileSiteKey && (
+        <TurnstileWidget siteKey={turnstileSiteKey} onToken={setTurnstileToken} resetKey={turnstileResetKey} />
+      )}
     </div>
   );
 };

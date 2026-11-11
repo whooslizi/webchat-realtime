@@ -27,11 +27,20 @@ export interface RegisterRequestDto {
   username: string;
   email: string;
   password: string;
+  /** Required while Turnstile is on (see `TurnstileConfigDto`). */
+  turnstileToken?: string;
 }
 
 export interface LoginRequestDto {
   emailOrUsername: string;
   password: string;
+  /** Required while Turnstile is on (see `TurnstileConfigDto`). */
+  turnstileToken?: string;
+}
+
+/** `GET /api/auth/turnstile`: the public site key, or null when the bot check is off. */
+export interface TurnstileConfigDto {
+  siteKey: string | null;
 }
 
 /**

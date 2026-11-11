@@ -140,6 +140,8 @@ Copy `server/.env.example` to **`server/.env`** and fill it in. The server, the 
 | `SUPABASE_STORAGE_BUCKET` | With `supabase` storage | The private Attachment bucket, `attachments`. |
 | `LOG_LEVEL` | No (default `info`) | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`. |
 | `GIPHY_API_KEY` | No | GIF search; without it the app uses built-in curated GIFs. |
+| `TURNSTILE_SITE_KEY` | No (set both or neither) | Cloudflare Turnstile site key. With both keys set, login and register require a Turnstile token and `https://challenges.cloudflare.com` is added to the CSP. |
+| `TURNSTILE_SECRET_KEY` | With `TURNSTILE_SITE_KEY` | Turnstile secret key, used only by the server to verify tokens. |
 
 In production the server also refuses to start without the built client (`client/dist/index.html`). `JWT_SECRET`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `PUBLIC_URL`, the Cloudinary variables and `VITE_API_URL`/`VITE_SOCKET_URL` no longer exist: delete them wherever they are still set.
 
